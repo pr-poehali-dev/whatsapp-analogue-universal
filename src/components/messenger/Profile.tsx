@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import Icon from '@/components/ui/icon';
+import type { User } from '@/lib/api';
 
-const Profile: React.FC = () => {
-  const [name, setName] = useState('Иван Иванов');
-  const [status, setStatus] = useState('Всегда на связи 🌟');
-  const [editingName, setEditingName] = useState(false);
+interface ProfileProps {
+  user: User;
+  onLogout: () => void;
+}
+
+const Profile: React.FC<ProfileProps> = ({ user, onLogout }) => {
+  const [status, setStatus] = useState(user.status_text || 'Привет! Я использую мессенджер');
   const [editingStatus, setEditingStatus] = useState(false);
 
   const settings = [
@@ -18,7 +22,6 @@ const Profile: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full overflow-y-auto">
-      {/* Header */}
       <div className="wa-header px-4 py-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-white text-xl font-bold">Профиль</h1>
@@ -29,40 +32,27 @@ const Profile: React.FC = () => {
       </div>
 
       <div className="bg-white flex-1">
-        {/* Avatar section */}
+        {/* Avatar + name */}
         <div className="flex flex-col items-center py-8 bg-white border-b border-[var(--wa-divider)]">
           <div className="relative mb-4">
             <div className="w-28 h-28 rounded-full bg-gradient-to-br from-[var(--wa-dark-green)] to-[var(--wa-green)] flex items-center justify-center text-5xl shadow-lg">
-              👤
+              {user.avatar_emoji || '👤'}
             </div>
             <button className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-[var(--wa-green)] text-white flex items-center justify-center shadow-md hover:bg-[var(--wa-dark-green)] transition-colors">
               <Icon name="Camera" size={17} />
             </button>
           </div>
 
-          {/* Name */}
-          {editingName ? (
-            <div className="flex items-center gap-2 w-full max-w-xs px-4">
-              <input
-                autoFocus
-                value={name}
-                onChange={e => setName(e.target.value)}
-                onBlur={() => setEditingName(false)}
-                onKeyDown={e => e.key === 'Enter' && setEditingName(false)}
-                className="flex-1 text-center text-xl font-bold text-gray-900 border-b-2 border-[var(--wa-green)] outline-none bg-transparent py-1"
-              />
-            </div>
-          ) : (
-            <button
-              onClick={() => setEditingName(true)}
-              className="flex items-center gap-2 group"
-            >
-              <h2 className="text-xl font-bold text-gray-900">{name}</h2>
-              <Icon name="Pencil" size={15} className="text-[var(--wa-text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
-          )}
+          <h2 className="text-xl font-bold text-gray-900">{user.first_name} {user.last_name}</h2>
+          <p className="text-sm text-[var(--wa-text-muted)] mt-1">{user.phone}</p>
 
-          <p className="text-sm text-[var(--wa-text-muted)] mt-1">+7 900 000-00-00</p>
+          {/* City badge */}
+          <div className="mt-2 flex items-center gap-1.5 bg-[var(--wa-light-green)] px-3 py-1.5 rounded-full">
+            <Icon name="MapPin" size={13} className="text-[var(--wa-dark-green)]" />
+            <span className="text-sm font-semibold text-[var(--wa-dark-green)]">
+              {user.city}, {user.region}
+            </span>
+          </div>
         </div>
 
         {/* Status */}
@@ -123,9 +113,12 @@ const Profile: React.FC = () => {
         </div>
 
         {/* Logout */}
-        <button className="w-full flex items-center justify-center gap-2 py-5 text-red-500 hover:bg-red-50 transition-colors mt-2">
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center justify-center gap-2 py-5 text-red-500 hover:bg-red-50 transition-colors mt-2"
+        >
           <Icon name="LogOut" size={18} />
-          <span className="font-medium">Выйти</span>
+          <span className="font-medium">Выйти из аккаунта</span>
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import Icon from '@/components/ui/icon';
 import ChatList from '@/components/messenger/ChatList';
@@ -8,7 +8,9 @@ import Calls from '@/components/messenger/Calls';
 import Profile from '@/components/messenger/Profile';
 import CallScreen from '@/components/messenger/CallScreen';
 import CreateGroup from '@/components/messenger/CreateGroup';
+import AuthScreen from '@/components/messenger/AuthScreen';
 import { chats, contacts } from '@/data/mockData';
+import { apiMe, apiLogout, type User } from '@/lib/api';
 
 type Tab = 'chats' | 'calls' | 'contacts' | 'profile';
 
@@ -18,6 +20,37 @@ const App: React.FC = () => {
   const [callContactId, setCallContactId] = useState<string | null>(null);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showChat, setShowChat] = useState(false);
+
+  // Auth state
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  // Restore session on mount
+  useEffect(() => {
+    const token = localStorage.getItem('wa_token');
+    if (!token) { setAuthChecked(true); return; }
+    apiMe(token)
+      .then(res => {
+        if (res.user) setAuthUser(res.user);
+        else localStorage.removeItem('wa_token');
+      })
+      .catch(() => localStorage.removeItem('wa_token'))
+      .finally(() => setAuthChecked(false));
+
+    setAuthChecked(true);
+  }, []);
+
+  const handleAuth = (user: User, token: string) => {
+    localStorage.setItem('wa_token', token);
+    setAuthUser(user);
+  };
+
+  const handleLogout = async () => {
+    const token = localStorage.getItem('wa_token');
+    if (token) await apiLogout(token);
+    localStorage.removeItem('wa_token');
+    setAuthUser(null);
+  };
 
   const handleSelectChat = (id: string) => {
     setSelectedChatId(id);
@@ -39,6 +72,19 @@ const App: React.FC = () => {
       : contactId;
     setCallContactId(actualId);
   };
+
+  if (!authChecked && !authUser) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-[var(--wa-teal)]">
+        <div className="w-10 h-10 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Show auth if not logged in
+  if (!authUser) {
+    return <AuthScreen onAuth={handleAuth} />;
+  }
 
   const tabs: { id: Tab; icon: string; label: string; badge?: number }[] = [
     { id: 'chats', icon: 'MessageCircle', label: 'Чаты', badge: chats.reduce((a, c) => a + c.unread, 0) },
@@ -72,7 +118,7 @@ const App: React.FC = () => {
             <Contacts onCall={handleCall} onOpenChat={handleOpenChatForContact} />
           </div>
           <div className={`absolute inset-0 flex flex-col transition-opacity duration-200 ${activeTab === 'profile' ? 'opacity-100 pointer-events-auto z-10' : 'opacity-0 pointer-events-none z-0'}`}>
-            <Profile />
+            <Profile user={authUser} onLogout={handleLogout} />
           </div>
 
           <nav className="mt-auto border-t border-[var(--wa-divider)] bg-[var(--wa-teal)] flex relative z-20">
@@ -119,7 +165,7 @@ const App: React.FC = () => {
               <Contacts onCall={handleCall} onOpenChat={handleOpenChatForContact} />
             </div>
             <div className={`absolute inset-0 ${activeTab === 'profile' ? 'z-10' : 'z-0 pointer-events-none'}`}>
-              <Profile />
+              <Profile user={authUser} onLogout={handleLogout} />
             </div>
           </div>
 
